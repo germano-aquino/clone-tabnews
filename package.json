@@ -5,6 +5,7 @@
   "main": "index.js",
   "scripts": {
     "dev": "npm run services:up -d && npm run services:wait:database && npm run migrations:up && next dev",
+    "dev:safe": "node infra/scripts/run-server.js",
     "test": "npm run services:up -d && concurrently -n next,jest --hide next -k -s command-jest \"next dev\" \"jest --runInBand --verbose\"",
     "posttest": "npm run services:stop",
     "test:watch": "jest --watchAll --runInBand",
