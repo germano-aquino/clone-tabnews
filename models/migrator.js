@@ -1,4 +1,5 @@
 import database from "infra/database";
+import { ServiceError } from "infra/errors";
 import migrationRunner from "node-pg-migrate";
 import { resolve } from "node:path";
 
@@ -21,6 +22,14 @@ export async function listPendingMigrations() {
     });
 
     return pendingMigrations;
+  } catch (error) {
+    const migratorError = new ServiceError({
+      cause: error,
+      message: "Serviço de migração indisponível no momento.",
+    });
+
+    console.error(migratorError);
+    throw migratorError;
   } finally {
     dbClient?.end();
   }
@@ -38,6 +47,14 @@ export async function runPendingMigrations() {
     });
 
     return migratedMigrations;
+  } catch (error) {
+    const migratorError = new ServiceError({
+      cause: error,
+      message: "Serviço de migração indisponível no momento.",
+    });
+
+    console.error(migratorError);
+    throw migratorError;
   } finally {
     dbClient?.end();
   }
