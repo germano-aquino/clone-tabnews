@@ -2,50 +2,30 @@ import database from "infra/database";
 import { ValidationError } from "infra/errors";
 
 export async function create(userInputValues) {
-  await validateUniqueUsername(userInputValues.username);
-  await validateUniqueEmail(userInputValues.email);
+  await validateUniqueFields(userInputValues.email, userInputValues.username);
 
   const newUser = await runInsertQuery(userInputValues);
   return newUser;
 
-  async function validateUniqueUsername(username) {
+  async function validateUniqueFields(email, username) {
     const results = await database.query({
       text: `
       SELECT 
-        username 
-      FROM
-        users
-      WHERE
-        LOWER(username) = LOWER($1)
-      ;`,
-      values: [username],
-    });
-
-    if (results.rowCount > 0) {
-      throw new ValidationError({
-        message: `O username informado já está sendo utilizado.`,
-        action: `Utilize outro username para realizar o cadastro.`,
-      });
-    }
-  }
-
-  async function validateUniqueEmail(email) {
-    const results = await database.query({
-      text: `
-      SELECT 
-        email 
+        email, username 
       FROM
         users
       WHERE
         LOWER(email) = LOWER($1)
+      OR
+        LOWER(username) = LOWER($2)
       ;`,
-      values: [email],
+      values: [email, username],
     });
 
     if (results.rowCount > 0) {
       throw new ValidationError({
-        message: `O email informado já está sendo utilizado.`,
-        action: `Utilize outro email para realizar o cadastro.`,
+        message: `O 'username' ou 'email' informado já está sendo utilizado.`,
+        action: `Utilize outro 'username' ou 'email' para realizar o cadastro.`,
       });
     }
   }
