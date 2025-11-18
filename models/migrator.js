@@ -4,9 +4,11 @@ import migrationRunner from "node-pg-migrate";
 import { resolve } from "node:path";
 
 const migrationsOptions = {
+  dryRun: true,
   dir: resolve("infra", "migrations"),
   direction: "up",
-  verbose: true,
+  verbose: false,
+  log: () => {},
   migrationsTable: "pgmigrations",
 };
 
