@@ -1,4 +1,6 @@
 import orchestrator from "tests/orchestrator";
+import user from "models/user.js";
+import password from "models/password.js";
 import { version as uuidVersion } from "uuid";
 
 beforeAll(async () => {
@@ -29,13 +31,27 @@ describe("POST /api/v1/users", () => {
         id: responseBody.id,
         username: "gaquino",
         email: "germano.aquino@live.com",
-        password: "senha123",
+        password: responseBody.password,
         created_at: responseBody.created_at,
         updated_at: responseBody.updated_at,
       });
       expect(uuidVersion(responseBody.id)).toBe(4);
       expect(Date.parse(responseBody.created_at)).not.toBeNaN();
       expect(Date.parse(responseBody.updated_at)).not.toBeNaN();
+
+      const userInDatabase = await user.findOneByUsername("gaquino");
+      const correctPasswordMatch = await password.compare(
+        "senha123",
+        userInDatabase.password,
+      );
+
+      const incorrectPasswordMatch = await password.compare(
+        "senhaerrada",
+        userInDatabase.password,
+      );
+
+      expect(correctPasswordMatch).toBe(true);
+      expect(incorrectPasswordMatch).toBe(false);
     });
 
     test("With duplicated 'email'", async () => {
@@ -70,8 +86,8 @@ describe("POST /api/v1/users", () => {
 
       expect(response2Body).toEqual({
         name: "ValidationError",
-        message: "O 'username' ou 'email' informado já está sendo utilizado.",
-        action: "Utilize outro 'username' ou 'email' para realizar o cadastro.",
+        message: "O 'email' informado já está sendo utilizado.",
+        action: "Utilize outro 'email' para realizar esta operação.",
         status_code: 400,
       });
     });
@@ -108,8 +124,8 @@ describe("POST /api/v1/users", () => {
 
       expect(response2Body).toEqual({
         name: "ValidationError",
-        message: "O 'username' ou 'email' informado já está sendo utilizado.",
-        action: "Utilize outro 'username' ou 'email' para realizar o cadastro.",
+        message: "O 'username' informado já está sendo utilizado.",
+        action: "Utilize outro 'username' para realizar esta operação.",
         status_code: 400,
       });
     });
