@@ -128,6 +128,36 @@ async function hashPasswordInObject(userInputValues) {
   userInputValues.password = hashedPassword;
 }
 
+export async function findOneById(username) {
+  const userFound = runSelectQuery(username);
+
+  return userFound;
+
+  async function runSelectQuery(id) {
+    const results = await database.query({
+      text: `
+      SELECT
+        *
+      FROM
+        users
+      WHERE
+        id = $1
+      LIMIT
+        1
+      ;`,
+      values: [id],
+    });
+
+    if (results.rowCount === 0) {
+      throw new NotFoundError({
+        message: `O 'id' informado não foi encontrado no sistema.`,
+        action: `Verifique se o 'id' está digitado corretamente.`,
+      });
+    }
+    return results.rows[0];
+  }
+}
+
 export async function findOneByUsername(username) {
   const userFound = runSelectQuery(username);
 
@@ -191,6 +221,7 @@ async function findOneByEmail(email) {
 const user = {
   create,
   update,
+  findOneById,
   findOneByUsername,
   findOneByEmail,
 };
