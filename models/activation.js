@@ -1,5 +1,6 @@
 import database from "infra/database";
 import email from "infra/email";
+import { NotFoundError } from "infra/errors";
 import webserver from "infra/webserver";
 
 const EXPIRATION_IN_MILLISECONDS = 60 * 15 * 1000; // 15 minutes
@@ -27,11 +28,11 @@ async function create(userId) {
   }
 }
 
-async function findOneByUserId(userId) {
-  const userActivationToken = await runSelectQuery(userId);
-  return userActivationToken;
+async function findOneValidById(id) {
+  const userToBeActivatedId = await runSelectQuery(id);
+  return userToBeActivatedId;
 
-  async function runSelectQuery(userId) {
+  async function runSelectQuery(id) {
     const results = await database.query({
       text: `
         SELECT
@@ -39,12 +40,22 @@ async function findOneByUserId(userId) {
         FROM
           user_activation_tokens
         WHERE
-          user_id = $1
+          id = $1
+          AND used_at IS NULL
+          AND expires_at > NOW()
         LIMIT
           1
       ;`,
-      values: [userId],
+      values: [id],
     });
+
+    if (results.rowCount === 0) {
+      throw NotFoundError({
+        message:
+          "O token de ativação não foi encontrado no sistema ou expirou.",
+        action: "Faça um novo cadastro.",
+      });
+    }
     return results.rows[0];
   }
 }
@@ -63,6 +74,6 @@ Equipe clone tabnews`,
   });
 }
 
-const activation = { sendEmailToUser, findOneByUserId, create };
+const activation = { sendEmailToUser, findOneValidById, create };
 
 export default activation;
