@@ -1,5 +1,6 @@
 import webserver from "infra/webserver";
 import activation from "models/activation";
+import user from "models/user";
 import orchestrator from "tests/orchestrator";
 
 beforeAll(async () => {
@@ -11,6 +12,8 @@ beforeAll(async () => {
 
 describe("Use case: Registration flow (all successfull)", () => {
   let createUserBody;
+  let userActivationToken;
+
   test("Create user account", async () => {
     const createUserResponse = await fetch(
       "http://localhost:3000/api/v1/users",
@@ -42,7 +45,7 @@ describe("Use case: Registration flow (all successfull)", () => {
     });
   });
 
-  test("Send activation email", async () => {
+  test("Receive activation email", async () => {
     const lastEmail = await orchestrator.getLastEmail();
 
     expect(lastEmail.sender).toBe("<contato@curso.dev>");
@@ -50,7 +53,7 @@ describe("Use case: Registration flow (all successfull)", () => {
     expect(lastEmail.subject).toBe("Ative seu cadastro no clone tabnews.");
     expect(lastEmail.text).toContain("RegistrationFlow");
 
-    const userActivationToken = orchestrator.extractUUID(lastEmail.text);
+    userActivationToken = orchestrator.extractUUID(lastEmail.text);
 
     const activationTokenObject =
       await activation.findOneValidById(userActivationToken);
@@ -63,7 +66,25 @@ describe("Use case: Registration flow (all successfull)", () => {
     expect(activationTokenObject.used_at).toBe(null);
   });
 
-  test("Activate account", async () => {});
+  test("Activate account", async () => {
+    const response = await fetch(
+      `http://localhost:3000/api/v1/activation/${userActivationToken}`,
+      {
+        method: "PATCH",
+      },
+    );
+
+    expect(response.status).toBe(200);
+
+    const responseBody = await response.json();
+
+    const activatedUserObject =
+      await user.findOneByUsername("RegistrationFlow");
+
+    expect(Date.parse(responseBody.used_at)).not.toBeNaN();
+    expect(new Date(responseBody.used_at) < Date.now()).toBe(true);
+    expect(activatedUserObject.features).toEqual(["create:session"]);
+  });
 
   test("Login", async () => {});
 

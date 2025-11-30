@@ -2,6 +2,7 @@ import database from "infra/database";
 import email from "infra/email";
 import { NotFoundError } from "infra/errors";
 import webserver from "infra/webserver";
+import user from "./user";
 
 const EXPIRATION_IN_MILLISECONDS = 60 * 15 * 1000; // 15 minutes
 
@@ -28,11 +29,50 @@ async function create(userId) {
   }
 }
 
-async function findOneValidById(id) {
-  const userToBeActivatedId = await runSelectQuery(id);
+async function markTokenAsUsed(tokenId) {
+  const activationTokenObject = await runUpdateQuery(tokenId);
+  return activationTokenObject;
+
+  async function runUpdateQuery(tokenId) {
+    const results = await database.query({
+      text: `
+        UPDATE
+          user_activation_tokens
+        SET
+          used_at = TIMEZONE('utc', NOW()),
+          updated_at = TIMEZONE('utc', NOW())
+        WHERE
+          id = $1
+          AND used_at IS NULL
+          AND expires_at > NOW()
+        RETURNING
+          *
+      ;`,
+      values: [tokenId],
+    });
+
+    if (results.rowCount === 0) {
+      throw NotFoundError({
+        message:
+          "O token de ativação não foi encontrado no sistema ou expirou.",
+        action: "Faça um novo cadastro.",
+      });
+    }
+
+    return results.rows[0];
+  }
+}
+
+async function activateUserByUserId(userId) {
+  const activatedUser = await user.setFeatures(userId, ["create:session"]);
+  return activatedUser;
+}
+
+async function findOneValidById(tokenId) {
+  const userToBeActivatedId = await runSelectQuery(tokenId);
   return userToBeActivatedId;
 
-  async function runSelectQuery(id) {
+  async function runSelectQuery(tokenId) {
     const results = await database.query({
       text: `
         SELECT
@@ -46,7 +86,7 @@ async function findOneValidById(id) {
         LIMIT
           1
       ;`,
-      values: [id],
+      values: [tokenId],
     });
 
     if (results.rowCount === 0) {
@@ -74,6 +114,12 @@ Equipe clone tabnews`,
   });
 }
 
-const activation = { sendEmailToUser, findOneValidById, create };
+const activation = {
+  sendEmailToUser,
+  findOneValidById,
+  create,
+  markTokenAsUsed,
+  activateUserByUserId,
+};
 
 export default activation;

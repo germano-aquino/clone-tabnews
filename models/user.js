@@ -224,9 +224,34 @@ async function findOneByEmail(email) {
   }
 }
 
+async function setFeatures(userId, features) {
+  const updatedUser = await runUpdateQuery(userId);
+  return updatedUser;
+
+  async function runUpdateQuery(userId) {
+    const results = await database.query({
+      text: `
+        UPDATE
+          users
+        SET
+          features = $2,
+          updated_at = TIMEZONE('utc', NOW())
+        WHERE
+          id = $1
+        RETURNING
+          *
+      ;`,
+      values: [userId, features],
+    });
+
+    return results.rows[0];
+  }
+}
+
 const user = {
   create,
   update,
+  setFeatures,
   findOneById,
   findOneByUsername,
   findOneByEmail,
