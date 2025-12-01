@@ -1,5 +1,6 @@
 import webserver from "infra/webserver";
 import activation from "models/activation";
+import password from "models/password";
 import user from "models/user";
 import orchestrator from "tests/orchestrator";
 
@@ -13,6 +14,7 @@ beforeAll(async () => {
 describe("Use case: Registration flow (all successfull)", () => {
   let createUserBody;
   let userActivationToken;
+  let createSessionBody;
 
   test("Create user account", async () => {
     const createUserResponse = await fetch(
@@ -83,7 +85,10 @@ describe("Use case: Registration flow (all successfull)", () => {
 
     expect(Date.parse(responseBody.used_at)).not.toBeNaN();
     expect(new Date(responseBody.used_at) < Date.now()).toBe(true);
-    expect(activatedUserObject.features).toEqual(["create:session"]);
+    expect(activatedUserObject.features).toEqual([
+      "create:session",
+      "read:session",
+    ]);
   });
 
   test("Login", async () => {
@@ -103,10 +108,30 @@ describe("Use case: Registration flow (all successfull)", () => {
 
     expect(createSessionResponse.status).toBe(201);
 
-    const createSessionBody = await createSessionResponse.json();
+    createSessionBody = await createSessionResponse.json();
 
     expect(createSessionBody.user_id).toBe(createUserBody.id);
   });
 
-  test("Get user information", async () => {});
+  test("Get user information", async () => {
+    const userInfoResponse = await fetch("http://localhost:3000/api/v1/user", {
+      headers: {
+        Cookie: `session_id=${createSessionBody.token}`,
+      },
+    });
+
+    expect(userInfoResponse.status).toBe(200);
+
+    const userInfoBody = await userInfoResponse.json();
+
+    expect(userInfoBody).toEqual({
+      id: createUserBody.id,
+      username: createUserBody.username,
+      email: createUserBody.email,
+      features: ["create:session", "read:session"],
+      password: createUserBody.password,
+      created_at: createUserBody.created_at,
+      updated_at: userInfoBody.updated_at,
+    });
+  });
 });
