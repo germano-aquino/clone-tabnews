@@ -38,7 +38,7 @@ async function waitForAllServices() {
       const response = await fetch(emailHttpUrl);
 
       if (response.status !== 200) {
-        throw Error();
+        throw new Error();
       }
     }
   }
@@ -61,12 +61,16 @@ async function createUser(userObject) {
   });
 }
 
+async function createActivationToken(inactiveUser) {
+  return await activation.create(inactiveUser.id);
+}
+
 async function activateUser(user) {
   return await activation.activateUserByUserId(user.id);
 }
 
-async function createSession(userId) {
-  return await session.create(userId);
+async function createSession(user) {
+  return await session.create(user.id);
 }
 
 async function deleteAllEmails() {
@@ -107,6 +111,7 @@ const orchestrator = {
   runPendingMigrations,
   createUser,
   activateUser,
+  createActivationToken,
   createSession,
   deleteAllEmails,
   getLastEmail,

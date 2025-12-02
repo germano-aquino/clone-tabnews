@@ -1,6 +1,5 @@
 import webserver from "infra/webserver";
 import activation from "models/activation";
-import password from "models/password";
 import user from "models/user";
 import orchestrator from "tests/orchestrator";
 
@@ -11,7 +10,7 @@ beforeAll(async () => {
   await orchestrator.deleteAllEmails();
 });
 
-describe("Use case: Registration flow (all successfull)", () => {
+describe("Use case: Registration flow (all successful)", () => {
   let createUserBody;
   let userActivationToken;
   let createSessionBody;
